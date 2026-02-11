@@ -1151,6 +1151,65 @@ def _ensure_markdown_images_in_blocks(markdown_text: str, blocks: list[dict[str,
     return [*inject_blocks, *blocks]
 
 
+def _make_toggle_block(title: str, children: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    block: dict[str, Any] = {
+        "object": "block",
+        "type": "toggle",
+        "toggle": {
+            "rich_text": [
+                {
+                    "type": "text",
+                    "text": {"content": title[:1900]},
+                }
+            ]
+        },
+    }
+    if children:
+        block["toggle"]["children"] = children
+    return block
+
+
+def _reference_answer_text_from_plain(plain_text: str) -> str | None:
+    text = str(plain_text or "").strip()
+    if not text.startswith("参考答案"):
+        return None
+    answer = re.sub(r"^参考答案\s*[：:]?\s*", "", text).strip()
+    return answer
+
+
+def _convert_reference_answer_to_toggle_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _walk(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for block in items:
+            if not isinstance(block, dict):
+                continue
+            b_type = str(block.get("type", "")).strip()
+            b_data = block.get(b_type)
+            if isinstance(b_data, dict):
+                children = b_data.get("children")
+                if isinstance(children, list):
+                    b_data["children"] = _walk([c for c in children if isinstance(c, dict)])
+
+            if b_type in {"bulleted_list_item", "numbered_list_item", "paragraph"} and isinstance(b_data, dict):
+                rich = b_data.get("rich_text")
+                plain = _extract_property_plain_text(rich)
+                answer = _reference_answer_text_from_plain(plain)
+                if answer is not None:
+                    toggle_children: list[dict[str, Any]] = []
+                    if answer:
+                        toggle_children.append(_make_paragraph_block(answer))
+                    existing_children = b_data.get("children")
+                    if isinstance(existing_children, list):
+                        toggle_children.extend([c for c in existing_children if isinstance(c, dict)])
+                    out.append(_make_toggle_block("参考答案", toggle_children))
+                    continue
+
+            out.append(block)
+        return out
+
+    return _walk([b for b in blocks if isinstance(b, dict)])
+
+
 def upload_markdown_to_notion(markdown_text: str) -> dict[str, Any]:
     notion = _create_notion_client()
     parent_obj, schema_obj, target_type = _resolve_notion_parent_and_schema(notion)
@@ -1158,6 +1217,7 @@ def upload_markdown_to_notion(markdown_text: str) -> dict[str, Any]:
 
     blocks = _markdown_to_notion_blocks(markdown_text)
     blocks = _ensure_markdown_images_in_blocks(markdown_text, blocks)
+    blocks = _convert_reference_answer_to_toggle_blocks(blocks)
 
     steps: list[str] = []
     temp_title = "待命名"

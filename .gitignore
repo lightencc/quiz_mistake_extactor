@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+output/
+web_data/
+.env
+node_modules/
+/photos

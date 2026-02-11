@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>错题notion同步助手</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  </head>
+  <body>
+    <div class="ai-health-widget">
+      <button id="ai-health-check-btn" type="button" class="ai-health-btn" title="点击手动检测 AI 接口连通性">
+        <span id="ai-health-dot" class="ai-health-dot ai-health-loading"></span>
+        <span id="ai-health-text">AI 检测中...</span>
+      </button>
+      <span id="ai-health-latency" class="ai-health-latency"></span>
+    </div>
+
+    <main class="page">
+      <section class="card">
+        <h1>错题notion同步助手</h1>
+        <p class="hint">支持多图上传。画完题目框后自动识别，支持手动编辑后直接导出。</p>
+        <div id="upload-dropzone" class="upload-dropzone" role="button" tabindex="0" aria-label="拖拽或点击上传图片">
+          <p class="dropzone-title">拖拽图片到这里上传</p>
+          <p class="dropzone-sub">或点击此区域选择多张图片</p>
+          <input id="image-input" class="hidden-input" type="file" accept="image/*" multiple />
+        </div>
+        <p id="status" class="status"></p>
+      </section>
+
+      <section class="workspace">
+        <div class="canvas-panel card">
+          <div class="toolbar" id="tool-group">
+            <button id="tool-select-btn" type="button">选择/调整</button>
+            <button id="draw-question-btn" type="button">绘制题目框</button>
+            <button id="draw-figure-btn" type="button">绘制图形框</button>
+          </div>
+
+          <div class="carousel">
+            <button id="prev-image-btn" type="button">上一张</button>
+            <span id="image-indicator" class="image-indicator">未上传图片</span>
+            <button id="next-image-btn" type="button">下一张</button>
+          </div>
+
+          <div id="image-tabs" class="image-tabs"></div>
+
+          <canvas id="canvas"></canvas>
+          <p class="hint">
+            蓝色=题目框，橙色=图形框，红色虚线=当前选中。拖拽框体移动，拖拽控制点调整大小。选中后右上角可删除。
+          </p>
+        </div>
+
+        <div class="sidebar card">
+          <h2>当前图片标注与识别</h2>
+          <div id="question-list" class="list"></div>
+
+          <h2>Markdown 提示词模板</h2>
+          <textarea id="prompt-template" rows="12"></textarea>
+
+          <div class="actions">
+            <button id="reset-prompt-btn" type="button">恢复默认模板</button>
+            <button id="export-btn" type="button">导出并上传 Notion</button>
+          </div>
+
+          <p id="export-status" class="status"></p>
+          <div id="notion-progress-wrap" class="notion-progress-wrap" hidden>
+            <div class="notion-progress-track">
+              <div id="notion-progress-bar" class="notion-progress-bar"></div>
+            </div>
+            <p id="notion-progress-text" class="hint notion-progress-text"></p>
+          </div>
+          <div id="export-links" class="links"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

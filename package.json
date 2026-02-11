@@ -1,0 +1,8 @@
+{
+  "name": "quiz-mistake-extractor",
+  "private": true,
+  "description": "Markdown to Notion upload helper dependencies",
+  "dependencies": {
+    "@tryfabric/martian": "^1.2.4"
+  }
+}

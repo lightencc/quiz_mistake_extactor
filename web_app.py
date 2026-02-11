@@ -93,6 +93,7 @@ GEMINI_REQUEST_TIMEOUT_SECONDS = float(
     or os.getenv("MOONSHOT_REQUEST_TIMEOUT_SECONDS")
     or "90"
 )
+GEMINI_OCR_MODEL = (os.getenv("GEMINI_OCR_MODEL") or GEMINI_MODEL).strip()
 NOTION_API_KEY = (
     os.getenv("NOTION_API_KEY")
     or os.getenv("NOTION_TOKEN")
@@ -816,6 +817,42 @@ def _call_baidu_ocr(image_path: Path) -> dict[str, Any]:
     if int(_safe_float(data.get("error_code"), 0)) in {110, 111}:  # token invalid/expired
         data = _once(True)
     return data
+
+
+def _call_gemini_ocr_text(image_path: Path) -> tuple[str, int]:
+    if Image is None:
+        raise RuntimeError("缺少 Pillow 依赖，无法加载图片进行 OCR。")
+    begin = time.time()
+    client = _create_gemini_client()
+    prompt = (
+        "你是小学数学 OCR 助手。请提取图片中题干相关的印刷体文字，"
+        "忽略手写作答、勾叉、红笔批注、分数、草稿和无关装饰。"
+        "保留数学符号、单位、分数与换行顺序。"
+        "只输出纯文本，不要解释，不要加标题，不要 Markdown。"
+    )
+    with Image.open(image_path) as pil_img:
+        kwargs: dict[str, Any] = {
+            "model": GEMINI_OCR_MODEL,
+            "contents": [prompt, pil_img.copy()],
+        }
+        if genai_types is not None and hasattr(genai_types, "GenerateContentConfig"):
+            kwargs["config"] = genai_types.GenerateContentConfig(
+                temperature=0.0,
+                max_output_tokens=1024,
+            )
+        resp = client.models.generate_content(**kwargs)
+    text = strip_markdown_fence(_extract_gemini_text(resp))
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    cleaned = "\n".join(lines).strip()
+    elapsed_ms = int((time.time() - begin) * 1000)
+    logger.info(
+        "[ocr-gemini] done model=%s file=%s chars=%d elapsed_ms=%d",
+        GEMINI_OCR_MODEL,
+        image_path.name,
+        len(cleaned),
+        elapsed_ms,
+    )
+    return cleaned, elapsed_ms
 
 
 def _require_github_config() -> None:
@@ -1703,20 +1740,16 @@ def api_recognize_question():
         return json_error("裁剪题目区域失败，请检查框选范围。")
 
     try:
-        raw = _call_baidu_ocr(crop_path)
+        ocr_text, ocr_elapsed_ms = _call_gemini_ocr_text(crop_path)
     except Exception as exc:
         return json_error(f"OCR 调用失败：{exc}")
-
-    if int(_safe_float(raw.get("error_code"), 0)) > 0:
-        error_msg = raw.get("error_msg") or "未知错误"
-        return json_error(f"OCR 返回错误：{error_msg}")
-
-    ocr_text = _filter_printed_text(raw, BAIDU_PRINTED_MIN_CONF)
     return jsonify(
         {
             "ok": True,
             "ocr_text": ocr_text,
             "crop_data_url": encode_image_as_data_url(crop_path),
+            "ocr_elapsed_ms": ocr_elapsed_ms,
+            "ocr_model": GEMINI_OCR_MODEL,
         }
     )
 

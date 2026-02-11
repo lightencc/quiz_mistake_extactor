@@ -208,6 +208,8 @@ function createQuestion(rect) {
     ocr_loading: false,
     ocr_error: "",
     ocr_preview: "",
+    ocr_elapsed_ms: 0,
+    ocr_model: "",
     ocr_req_id: 0,
   };
 }
@@ -981,11 +983,17 @@ async function recognizeQuestion(qi, options = {}) {
     if (q.ocr_req_id !== reqId) return;
     q.ocr_text = String(data.ocr_text || "");
     q.ocr_preview = String(data.crop_data_url || "");
+    q.ocr_elapsed_ms = Number(data.ocr_elapsed_ms || 0);
+    q.ocr_model = String(data.ocr_model || "");
     q.ocr_loading = false;
     q.ocr_error = "";
 
     renderQuestionList();
-    if (!silent) setExportStatus(`题目 ${qi + 1} 已完成识别，可直接编辑题干。`, false);
+    if (!silent) {
+      const speed = q.ocr_elapsed_ms > 0 ? `（${q.ocr_elapsed_ms}ms）` : "";
+      const model = q.ocr_model ? `，模型：${q.ocr_model}` : "";
+      setExportStatus(`题目 ${qi + 1} 已完成识别${speed}${model}，可直接编辑题干。`, false);
+    }
   } catch (error) {
     if (q.ocr_req_id !== reqId) return;
     q.ocr_loading = false;

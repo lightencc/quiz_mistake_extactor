@@ -9,7 +9,7 @@
 - 列表和画布都支持删除框
 - 每道题在右侧都有：
   - 裁剪预览图
-  - 自动 OCR 结果（画完题目框后自动触发）
+  - 自动 OCR 结果（Gemini，画完题目框后自动触发）
   - 可编辑富文本输入区
   - 数学表达式预览（支持 `$...$` / `$$...$$`）
 - 导出时每道题生成一个独立 Markdown（固定复盘模板）
@@ -32,19 +32,13 @@ npm install
 # Google GenAI（导出阶段）
 GOOGLE_API_KEY=你的GoogleAIKey
 GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_OCR_MODEL=gemini-3-flash-preview
 # 可选：使用代理或兼容网关时配置
 GEMINI_BASE_URL=
 GEMINI_API_VERSION=
 GEMINI_REQUEST_TIMEOUT_SECONDS=90
 # 兼容旧模型名变量（仅模型名可回退）
 MODEL=
-
-# 百度 paper_cut_edu OCR
-BAIDU_OCR_API_KEY=你的百度API_KEY
-BAIDU_OCR_SECRET_KEY=你的百度SECRET_KEY
-BAIDU_OCR_URL=https://aip.baidubce.com/rest/2.0/ocr/v1/paper_cut_edu
-BAIDU_OCR_TIMEOUT=25
-BAIDU_OCR_PRINTED_MIN_CONF=0.50
 
 # GitHub 图床（导出前上传裁剪图）
 GITHUB_TOKEN=ghp_xxx
@@ -71,10 +65,9 @@ NOTION_TITLE_PREFIX=
 
 说明：
 
-- `GEMINI_*` 未配置时，会自动回退使用 `GOOGLE_API_KEY / OPENAI_API_KEY / BASE_URL / MODEL`。
 - `GEMINI_API_KEY` 未配置时，会回退 `GOOGLE_API_KEY`。
 - `GEMINI_BASE_URL` 只读取本字段；不会再回退 `BASE_URL`（避免 `/v1/v1beta` 路径冲突）。
-- 百度 OCR 也兼容 `API_KEY` / `SECRET_KEY` 变量名（与示例脚本一致）。
+- 题目框 OCR 也使用 Gemini（`GEMINI_OCR_MODEL`），便于统一对比速度与识别效果。
 - 导出时会将每道题裁剪图/图形图上传到 GitHub 仓库，图片链接会写成 `https://raw.githubusercontent.com/<repo>/refs/heads/<branch>/<path>`。
   例如：`https://github.com/lightencc/quiz_content/blob/main/images/img1_q1_question.png` 对应 `https://raw.githubusercontent.com/lightencc/quiz_content/refs/heads/main/images/img1_q1_question.png`。
 - Notion 上传流程：`创建页面 -> 读取 ID 字段 -> 更新标题(YYYY-MMDD-ID) -> 写入 Martian 转换后的 blocks`。
@@ -111,6 +104,6 @@ http://127.0.0.1:7860
 
 ## 常见问题
 
-- OCR 报鉴权失败：检查 `BAIDU_OCR_API_KEY/BAIDU_OCR_SECRET_KEY` 是否正确。
+- OCR 报鉴权失败：检查 `GOOGLE_API_KEY / GEMINI_API_KEY` 是否有效，且为 Google AI Studio API Key。
 - 识别文本不理想：可直接在每题编辑区手动修正，或删框后重画触发重识别。
 - 导出报 GitHub 配置错误：检查 `GITHUB_TOKEN/GITHUB_REPO/GITHUB_BRANCH`。
